@@ -1,23 +1,51 @@
-name: Telegram Test Message (One Shot)
+name: SFU Timetable Monitor
 
 on:
-  workflow_dispatch:  # Запускается только вручную
+  schedule:
+    - cron: '*/10 6-23 * * *'  # Каждые 10 минут с 6:00 до 23:00
+  workflow_dispatch:            # Возможность запустить вручную
 
 jobs:
-  send-test-message:
+  check-timetable:
     runs-on: ubuntu-latest
     steps:
-      - name: Send "Привет!" to Telegram channel
+      - name: Проверяем, появилось ли расписание
+        id: check
         run: |
-          curl -s -X POST \
-            "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
-            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
-            -d text="Привет! 🎉\n\nЭто тестовое сообщение от GitHub Actions.\nЕсли ты это видишь — всё работает!" \
-            -d disable_notification=false
+          # Делаем запрос к автозаполнению по "ки"
+          response=$(curl -s "https://edu.sfu-kras.ru/timetable/groups/autocomplete/%D0%BA%D0%B8")
+          echo "Ответ от API: $response"
+          
+          # Если в ответе есть запятая — значит, есть группы (расписание выложено)
+          if [[ "$response" == *","* ]]; then
+            echo "timetable_found=true" >> $GITHUB_ENV
+            echo "✅ Расписание найдено! Отправляем уведомление."
+          else
+            echo "Расписание ещё не доступно."
+            exit 1  # Прерываем job, но не workflow — чтобы продолжал проверять
+          fi
 
-      - name: Disable this workflow after success
+      - name: Отправляем уведомление в Telegram
+        if: env.timetable_found == 'true'
         run: |
-          echo "Отключаем workflow после успешной отправки..."
+          url="https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage"
+          message="🎉 Расписание для групп КИ выложено!\n\n👉 https://edu.sfu-kras.ru/timetable"
+          response=$(curl -s -X POST "$url" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$message" \
+            -d disable_notification=false)
+          
+          echo "Ответ Telegram: $response"
+          
+          if echo "$response" | grep -q '"ok":false'; then
+            echo "❌ Ошибка отправки уведомления"
+            exit 1
+          fi
+
+      - name: Отключаем workflow после успешной отправки
+        if: env.timetable_found == 'true'
+        run: |
+          echo "Отключаем workflow, чтобы не запускался снова..."
           curl -X PATCH \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
