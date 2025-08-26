@@ -29,7 +29,7 @@ jobs:
         if: env.timetable_found == 'true'
         run: |
           url="https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage"
-          message="🎉 Расписание для групп КИ выложено!\n\n👉 https://edu.sfu-kras.ru/timetable"
+          message="🎉 Расписание для групп КИ выложено!👉 https://edu.sfu-kras.ru/timetable"
           response=$(curl -s -X POST "$url" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d text="$message" \
