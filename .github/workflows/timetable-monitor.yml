@@ -1,0 +1,24 @@
+name: Telegram Test Message (One Shot)
+
+on:
+  workflow_dispatch:  # Запускается только вручную
+
+jobs:
+  send-test-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send "Привет!" to Telegram channel
+        run: |
+          curl -s -X POST \
+            "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d text="Привет! 🎉\n\nЭто тестовое сообщение от GitHub Actions.\nЕсли ты это видишь — всё работает!" \
+            -d disable_notification=false
+
+      - name: Disable this workflow after success
+        run: |
+          echo "Отключаем workflow после успешной отправки..."
+          curl -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/timetable-monitor.yml/disable"
