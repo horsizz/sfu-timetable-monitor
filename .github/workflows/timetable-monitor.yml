@@ -13,7 +13,7 @@ jobs:
         id: check
         run: |
           # Делаем запрос к автозаполнению по "ки"
-          response=$(curl -s "https://edu.sfu-kras.ru/timetable/groups/autocomplete/%D0%BA%D0%B8")
+          response=$(curl -s "https://edu.sfu-kras.ru/timetable/groups/autocomplete/%D0%BA%D0%B823")
           echo "Ответ от API: $response"
           
           # Если в ответе есть запятая — значит, есть группы (расписание выложено)
