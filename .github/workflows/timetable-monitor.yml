@@ -3,7 +3,7 @@ name: SFU Timetable Monitor
 on:
   schedule:
     - cron: '*/10 6-23 * * *'  # Каждые 10 минут с 6:00 до 23:00
-  workflow_dispatch:            # Возможность запустить вручную
+  workflow_dispatch:
 
 jobs:
   check-timetable:
@@ -12,28 +12,25 @@ jobs:
       - name: Проверяем, появилось ли расписание
         id: check
         run: |
-          # Делаем запрос к автозаполнению по "ки"
-          response=$(curl -s "https://edu.sfu-kras.ru/timetable/groups/autocomplete/%D0%BA%D0%B823")
+          response=$(curl -s "https://edu.sfu-kras.ru/timetable/groups/autocomplete/%D0%9A%D0%9823")
           echo "Ответ от API: $response"
           
-          # Если в ответе есть запятая — значит, есть группы (расписание выложено)
           if [[ "$response" == *","* ]]; then
             echo "timetable_found=true" >> $GITHUB_ENV
-            echo "✅ Расписание найдено! Отправляем уведомление."
+            echo "✅ Расписание найдено!"
           else
             echo "Расписание ещё не доступно."
-            exit 1  # Прерываем job, но не workflow — чтобы продолжал проверять
+            exit 1  # Останавливаем job, workflow продолжит по расписанию
           fi
 
       - name: Отправляем уведомление в Telegram
         if: env.timetable_found == 'true'
         run: |
           url="https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage"
-          message="🎉 Расписание для групп КИ23 выложено!👉 https://edu.sfu-kras.ru/timetable"
+          message="🎉 Расписание для групп КИ23 выложено!\n\n👉 https://edu.sfu-kras.ru/timetable"
           response=$(curl -s -X POST "$url" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d text="$message" \
-            -d disable_notification=false)
+            -d text="$message")
           
           echo "Ответ Telegram: $response"
           
@@ -45,7 +42,7 @@ jobs:
       - name: Отключаем workflow после успешной отправки
         if: env.timetable_found == 'true'
         run: |
-          echo "Отключаем workflow, чтобы не запускался снова..."
+          echo "Отключаем workflow навсегда..."
           curl -X PATCH \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
