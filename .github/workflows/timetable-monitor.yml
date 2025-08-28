@@ -1,49 +1,49 @@
-name: SFU Timetable Monitor
+# name: SFU Timetable Monitor
 
-on:
-  schedule:
-    - cron: '*/10 6-23 * * *'  # Каждые 10 минут с 6:00 до 23:00
-  workflow_dispatch:
+# on:
+#   schedule:
+#     - cron: '*/10 6-23 * * *'  # Каждые 10 минут с 6:00 до 23:00
+#   workflow_dispatch:
 
-jobs:
-  check-timetable:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Проверяем, появилось ли расписание
-        id: check
-        run: |
-          response=$(curl -s "https://edu.sfu-kras.ru/timetable/groups/autocomplete/%D0%9A%D0%9823")
-          echo "Ответ от API: $response"
+# jobs:
+#   check-timetable:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Проверяем, появилось ли расписание
+#         id: check
+#         run: |
+#           response=$(curl -s "https://edu.sfu-kras.ru/timetable/groups/autocomplete/%D0%9A%D0%9823")
+#           echo "Ответ от API: $response"
           
-          if [[ "$response" == *","* ]]; then
-            echo "timetable_found=true" >> $GITHUB_ENV
-            echo "✅ Расписание найдено!"
-          else
-            echo "Расписание ещё не доступно."
-            exit 1  # Останавливаем job, workflow продолжит по расписанию
-          fi
+#           if [[ "$response" == *","* ]]; then
+#             echo "timetable_found=true" >> $GITHUB_ENV
+#             echo "✅ Расписание найдено!"
+#           else
+#             echo "Расписание ещё не доступно."
+#             exit 1  # Останавливаем job, workflow продолжит по расписанию
+#           fi
 
-      - name: Отправляем уведомление в Telegram
-        if: env.timetable_found == 'true'
-        run: |
-          url="https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage"
-          message="🎉 Расписание для групп КИ23 выложено!\n\n👉 https://edu.sfu-kras.ru/timetable"
-          response=$(curl -s -X POST "$url" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d text="$message")
+#       - name: Отправляем уведомление в Telegram
+#         if: env.timetable_found == 'true'
+#         run: |
+#           url="https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage"
+#           message="🎉 Расписание для групп КИ23 выложено!\n\n👉 https://edu.sfu-kras.ru/timetable"
+#           response=$(curl -s -X POST "$url" \
+#             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+#             -d text="$message")
           
-          echo "Ответ Telegram: $response"
+#           echo "Ответ Telegram: $response"
           
-          if echo "$response" | grep -q '"ok":false'; then
-            echo "❌ Ошибка отправки уведомления"
-            exit 1
-          fi
+#           if echo "$response" | grep -q '"ok":false'; then
+#             echo "❌ Ошибка отправки уведомления"
+#             exit 1
+#           fi
 
-      - name: Отключаем workflow после успешной отправки
-        if: env.timetable_found == 'true'
-        run: |
-          echo "Отключаем workflow навсегда..."
-          curl -X PATCH \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/timetable-monitor.yml/disable"
+#       - name: Отключаем workflow после успешной отправки
+#         if: env.timetable_found == 'true'
+#         run: |
+#           echo "Отключаем workflow навсегда..."
+#           curl -X PATCH \
+#             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+#             -H "Accept: application/vnd.github.v3+json" \
+#             "https://api.github.com/repos/${{ github.repository }}/actions/workflows/timetable-monitor.yml/disable"
